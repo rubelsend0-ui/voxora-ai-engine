@@ -1,0 +1,28 @@
+# GPU overlay: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+# Needs the NVIDIA Container Toolkit on the host.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gpu
+    image: voxora-ai-engine:gpu
+    environment:
+      VOXORA_DEVICE: cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  worker:
+    image: voxora-ai-engine:gpu
+    environment:
+      VOXORA_DEVICE: cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

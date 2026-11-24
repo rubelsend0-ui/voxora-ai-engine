@@ -1,0 +1,12 @@
+# AI engines. Install torch FIRST for your hardware (see docs/DEPLOYMENT.md), then this file.
+#   CPU : pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+#   CUDA: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+#
+# Ranges are intentionally loose because they could not be install-tested together in the authoring sandbox.
+# After your first successful install run `pip freeze > constraints.txt` and pin with `pip install -c constraints.txt`.
+coqui-tts>=0.25,<1.0        # maintained fork of Coqui TTS (code: MPL-2.0). Python >=3.10,<3.13 at time of writing.
+faster-whisper>=1.0         # MIT
+transformers>=4.43,<5       # MarianMT (Apache-2.0)
+sentencepiece>=0.2
+sacremoses>=0.1
+huggingface_hub>=0.23

@@ -1,0 +1,17 @@
+# Lightweight dev stack: ONE container, SQLite, in-process job queue. No Redis, no PostgreSQL.
+#   docker compose -f docker-compose.local.yml up --build
+#   docker compose -f docker-compose.local.yml run --rm api python -m scripts.create_api_key --email me@example.com
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      VOXORA_ENVIRONMENT: development
+      VOXORA_DATA_DIR: /data
+      VOXORA_DATABASE_URL: sqlite:////data/voxora.db
+      VOXORA_AUTO_CREATE_TABLES: "true"
+      VOXORA_JOB_BACKEND: local
+      VOXORA_API_KEY_PEPPER: ${VOXORA_API_KEY_PEPPER:-dev-only-pepper-change-me-0123456789abcdef}
+    volumes: [voxora-data:/data]
+volumes:
+  voxora-data:

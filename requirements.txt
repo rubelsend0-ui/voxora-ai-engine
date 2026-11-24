@@ -1,0 +1,12 @@
+# Core API (no ML). Works on its own; AI endpoints answer 503 AI_ENGINE_NOT_CONFIGURED until models are installed.
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic>=2.7,<3
+pydantic-settings>=2.3
+sqlalchemy>=2.0.30,<2.1
+alembic>=1.13
+psycopg[binary]>=3.1        # PostgreSQL driver (URL scheme: postgresql+psycopg://)
+celery>=5.4,<6              # background jobs when VOXORA_JOB_BACKEND=celery
+redis>=5.0                  # Celery broker + shared rate limiting
+numpy>=1.26

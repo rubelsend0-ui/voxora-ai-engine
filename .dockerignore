@@ -1,0 +1,16 @@
+.git
+.github
+.env
+data
+models
+storage
+tests
+docs
+__pycache__
+*.pyc
+.venv
+*.wav
+*.mp3
+*.mp4
+*.pth
+*.pt

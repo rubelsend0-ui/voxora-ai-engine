@@ -1,0 +1,36 @@
+# secrets / env
+.env
+*.pem
+# runtime data - never commit media, models or databases
+data/
+models/
+storage/
+*.db
+*.sqlite3
+# model weights and generated audio
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.onnx
+*.bin
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.mp4
+!tests/**/*.keep
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+constraints.txt

@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read   # least privilege; this workflow uses no secrets
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dummy, non-secret values used only for build/test validation.
+  VOXORA_ENVIRONMENT: test
+  VOXORA_API_KEY_PEPPER: ci-only-pepper-0123456789-0123456789-abcdef
+
+jobs:
+  lint:
+    name: Python lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install ruff
+      - run: ruff check .
+
+  unit-tests:
+    name: Unit tests (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}", cache: pip}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+      - run: pip install -r requirements-dev.txt
+      - run: pytest tests/unit -q
+
+  api-tests:
+    name: API tests (real app + DB + storage + FFmpeg; neural models are test doubles)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+      - run: pip install -r requirements-dev.txt
+      - run: pytest tests/api -q
+
+  build-validation:
+    name: Build validation (compile, OpenAPI, migrations)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q app scripts alembic
+      - name: Export OpenAPI schema
+        env:
+          VOXORA_DATA_DIR: ${{ runner.temp }}/voxora
+        run: python -c "import json; from app.main import app; json.dump(app.openapi(), open('openapi.json','w'), indent=2)"
+      - name: Migrations apply cleanly on a fresh database
+        env:
+          VOXORA_DATA_DIR: ${{ runner.temp }}/voxora
+          VOXORA_DATABASE_URL: sqlite:///${{ runner.temp }}/voxora/ci.db
+        run: alembic upgrade head
+      - uses: actions/upload-artifact@v4
+        with: {name: openapi, path: openapi.json}
+
+  docker-build:
+    name: Docker build (no push)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API image (without ML packages, for speed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: voxora-ai-engine:ci
+          build-args: INSTALL_AI=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Container starts and reports healthy
+        run: |
+          docker run -d --name voxora -p 8000:8000 \
+            -e VOXORA_AUTO_CREATE_TABLES=true -e VOXORA_ENVIRONMENT=development voxora-ai-engine:ci
+          for i in $(seq 1 30); do curl -fsS localhost:8000/health/live && exit 0; sleep 2; done
+          docker logs voxora; exit 1
+      - name: Validate compose files
+        env:
+          POSTGRES_PASSWORD: ci-only
+        run: |
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.gpu.yml config -q
+          docker compose -f docker-compose.local.yml config -q
